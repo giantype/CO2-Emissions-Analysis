@@ -46,3 +46,16 @@ def clean_data():
 
 data = clean_data()
 print(data.head)
+
+# Global CO₂ emissions over time
+global_emissions = data.groupby('year')['co2'].sum()
+plt.figure(figsize=(12, 7))
+plt.plot(global_emissions.index, global_emissions.values, marker='o', markersize=3, linestyle='-', color='orange', linewidth=2)
+plt.title('Global CO₂ Emissions Over Time', fontsize=16, weight='bold')
+plt.xlabel('Year', fontsize=14)
+plt.ylabel('Total CO₂ Emissions (Million Tonnes)', fontsize=14)
+plt.grid(True, linestyle='--', alpha=0.5)
+plt.tight_layout()
+
+plt.savefig('Visualisations/global_co2_trend.png')
+plt.show()
