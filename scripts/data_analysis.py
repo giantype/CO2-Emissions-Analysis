@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pycountry_convert as pc
+import pycountry
 
 # Manual corrections for unrecognised countries and regions
 manual_country_to_continent = {
@@ -50,6 +51,21 @@ manual_country_to_continent = {
     "OECD (GCP)": "Other",
     "OECD (Jones et al.)": "Other",
     "Middle East (GCP)": "Asia",
+}
+
+valid_countries = set(country.name for country in pycountry.countries)
+
+special_cases = {
+    "United States": "United States of America",
+    "Democratic Republic of Congo": "Congo, The Democratic Republic of the",
+    "Cote d'Ivoire": "Côte d'Ivoire",
+    "South Korea": "Korea, Republic of",
+    "North Korea": "Korea, Democratic People's Republic of",
+    "Russia": "Russian Federation",
+    "Vietnam": "Viet Nam",
+    "Syria": "Syrian Arab Republic",
+    "Iran": "Iran, Islamic Republic of",
+    "Vatican": "Holy See (Vatican City State)"
 }
 
 # Continent mapping
@@ -135,7 +151,7 @@ continent_emissions = data.groupby(['year', 'country'])['co2'].sum().reset_index
 continent_emissions['continent'] = continent_emissions['country'].apply(country_to_continent)
 continent_trend = continent_emissions.groupby(['year', 'continent'])['co2'].sum().unstack()
 
-# exclude "other" category (the aggregated data was dominating the chart)
+# Exclude "other" category (the aggregated data was dominating the chart)
 filtered_continent_trend = continent_trend.drop(columns='Other', errors='ignore')
 
 custom_colors = {
@@ -149,7 +165,7 @@ custom_colors = {
 
 # Plot
 plt.figure(figsize=(12, 7))
-filtered_continent_trend.plot.area(ax=plt.gca(), stacked=True, color=[custom_colors[col] for col in filtered_continent_trend.columns], alpha=0.85, linewidth=0.5)
+filtered_continent_trend.plot.area(ax=plt.gca(), stacked=True, color=[custom_colors[col] for col in filtered_continent_trend.columns], alpha=0.85)
 plt.title('CO₂ Emissions by Continent Over Time', fontsize=16, weight='bold')
 plt.xlabel('Year', fontsize=14)
 plt.ylabel('Total CO₂ Emissions (Million Tonnes)', fontsize=14)
@@ -158,4 +174,46 @@ plt.grid(True, linestyle='--', alpha=0.5)
 plt.tight_layout()
 
 plt.savefig('Visualisations/continent_co2_trend.png')
+
+# Top 10 CO2 emissions by country visual
+filtered_data = data.copy()
+filtered_data['country'] = filtered_data['country'].replace(special_cases)
+filtered_data = filtered_data[filtered_data['country'].isin(valid_countries)]
+latest_year = filtered_data['year'].max()
+top_10_countries = filtered_data[filtered_data['year'] == latest_year].groupby('country')['co2'].sum().nlargest(10)
+
+plt.figure(figsize=(12, 7))
+sns.barplot(x=top_10_countries.values, y=top_10_countries.index, palette='viridis')
+plt.title(f'Top 10 CO₂ Emitting Countries in {latest_year}', fontsize=16, weight='bold')
+plt.xlabel('CO₂ Emissions (Million Tonnes)', fontsize=14)
+plt.ylabel('Country', fontsize=14)
+plt.grid(axis='x', linestyle='--', alpha=0.7)
+plt.tight_layout()
+
+plt.savefig('Visualisations/top_10_countries_co2_bar.png')
+
+# Emissions by sector visual
+latest_year = data['year'].max()
+sector_emissions_latest = data[data['year'] == latest_year][['coal_co2', 'oil_co2', 'gas_co2', 'cement_co2', 'flaring_co2', 'other_industry_co2']].sum()
+sector_emissions_latest.index = ['Coal', 'Oil', 'Gas', 'Cement', 'Flaring', 'Other Industry']
+
+plt.figure(figsize=(10, 6))
+bars = sns.barplot(x=sector_emissions_latest.index, y=sector_emissions_latest.values, palette='viridis')
+plt.title(f'CO₂ Emissions by Sector in {latest_year}', fontsize=16, weight='bold')
+plt.xlabel('Sector', fontsize=14)
+plt.ylabel('CO₂ Emissions (Million Tonnes)', fontsize=14)
+plt.xticks(rotation=45)
+plt.grid(axis='y', linestyle='--', alpha=0.7)
+
+for bar in bars.patches:
+    plt.text(
+        bar.get_x() + bar.get_width() / 2,  
+        bar.get_height(),                   
+        f'{int(bar.get_height()):,}',       
+        ha='center', va='bottom', fontsize=10, weight='bold'
+    )
+
+plt.tight_layout()
+
+plt.savefig('Visualisations/sector_co2_bar_chart.png')
 plt.show()
