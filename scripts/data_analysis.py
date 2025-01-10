@@ -133,6 +133,7 @@ def clean_data():
 
 data = clean_data()
 print(data.head)
+data.to_csv('data/cleaned_co2_data.csv', index=False)
 
 # Global CO2 emissions over time visual
 global_emissions = data.groupby('year')['co2'].sum()
@@ -205,6 +206,7 @@ plt.ylabel('CO₂ Emissions (Million Tonnes)', fontsize=14)
 plt.xticks(rotation=45)
 plt.grid(axis='y', linestyle='--', alpha=0.7)
 
+# Added exact values to each bar for legibility
 for bar in bars.patches:
     plt.text(
         bar.get_x() + bar.get_width() / 2,  
@@ -217,3 +219,42 @@ plt.tight_layout()
 
 plt.savefig('Visualisations/sector_co2_bar_chart.png')
 plt.show()
+
+# Statistics
+# Global CO₂ Emissions Over Time
+global_emissions = data.groupby('year')['co2'].sum()
+global_stats = global_emissions.describe()
+print("Global CO₂ Emissions Over Time Statistics:\n", global_stats, "\n")
+
+# CO2 Emissions by Continent
+continent_emissions = data.groupby(['year', 'country'])['co2'].sum().reset_index()
+continent_emissions['continent'] = continent_emissions['country'].apply(country_to_continent)
+continent_grouped = continent_emissions.groupby(['year', 'continent'])['co2'].sum().unstack()
+continent_stats = continent_grouped.describe()
+print("CO₂ Emissions by Continent Statistics:\n", continent_stats, "\n")
+
+# Top 10 CO2 Emitting Countries
+latest_year = data['year'].max()
+top_10_countries = data[data['year'] == latest_year].groupby('country')['co2'].sum().nlargest(10)
+top_10_stats = top_10_countries.describe()
+print(f"Top 10 CO₂ Emitting Countries in {latest_year} Statistics:\n", top_10_stats, "\n")
+
+# CO2 Emissions by Sector
+sector_columns = ['coal_co2', 'oil_co2', 'gas_co2', 'cement_co2', 'flaring_co2', 'other_industry_co2']
+sector_emissions = data[data['year'] == latest_year][sector_columns].sum()
+sector_stats = sector_emissions.describe()
+print(f"CO₂ Emissions by Sector in {latest_year} Statistics:\n", sector_stats, "\n")
+
+# Write statistics to a file
+with open('Statistics.txt', 'w', encoding='utf-8') as file:
+    file.write("Global CO₂ Emissions Over Time Statistics:\n")
+    file.write(str(global_stats) + "\n\n")
+    
+    file.write("CO₂ Emissions by Continent Statistics:\n")
+    file.write(str(continent_stats) + "\n\n")
+    
+    file.write(f"Top 10 CO₂ Emitting Countries in {latest_year} Statistics:\n")
+    file.write(str(top_10_stats) + "\n\n")
+    
+    file.write(f"CO₂ Emissions by Sector in {latest_year} Statistics:\n")
+    file.write(str(sector_stats) + "\n\n")
